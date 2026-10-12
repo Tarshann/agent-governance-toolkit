@@ -25,14 +25,14 @@ const registrationsByClient = new WeakMap();
  * Loads the AGT policy once per effective plugin registration and wires it into
  * the OpenCode plugin contract:
  *
- *  - session.created           — log AGT governance status at session start
- *  - event (chat.params/start) — scan submitted prompts; throw to block
- *  - tool.execute.before       — enforce policy; throw to deny, mark args
+ *  - session.created           â€” log AGT governance status at session start
+ *  - event (chat.params/start) â€” scan submitted prompts; throw to block
+ *  - tool.execute.before       â€” enforce policy; throw to deny, mark args
  *                                for OpenCode's permission prompt on review
- *  - tool.execute.after        — scan tool output for known secret patterns
+ *  - tool.execute.after        â€” scan tool output for known secret patterns
  *                                and redact in enforce mode
- *  - tool.agt_policy_status    — return current policy snapshot
- *  - tool.agt_policy_check_text — inspect arbitrary text for poisoning
+ *  - tool.agt_policy_status    â€” return current policy snapshot
+ *  - tool.agt_policy_check_text â€” inspect arbitrary text for poisoning
  *
  * The plugin fails closed: if AGT cannot evaluate a request and the active
  * policy has `denyOnPolicyError: true` (the default), the request is denied.
@@ -77,7 +77,8 @@ export const AgtGovernance = async (ctx) => {
   }
 
   return {
-    "session.created": async () => {
+    event: async ({ event } = {}) => {
+      if (event?.type === "session.created") {
       try {
         const state = await getState();
         const status = await getPolicyStatus(state);
@@ -87,7 +88,7 @@ export const AgtGovernance = async (ctx) => {
               service: "agt-governance",
               level: "info",
               message:
-                `[AGT] OpenCode governance active — mode=${status.mode} source=${status.source} ` +
+                `[AGT] OpenCode governance active â€” mode=${status.mode} source=${status.source} ` +
                 `promptDefenseEffective=${status.promptDefenseGrade} ` +
                 `promptDefenseConfigured=${status.configuredPromptDefenseGrade} ` +
                 `sessionStateEnabled=${status.sessionState.enabled} ` +
@@ -96,11 +97,10 @@ export const AgtGovernance = async (ctx) => {
           });
         }
       } catch {
-        // best-effort — do not block session creation
+        // best-effort â€” do not block session creation
       }
-    },
+      }
 
-    event: async ({ event } = {}) => {
       const lifecycleSessionId = extractLifecycleSessionId(event);
       if (event?.type === "session.deleted" && lifecycleSessionId) {
         const state = await getState();
